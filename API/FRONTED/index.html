@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Form Wilayah Indonesia</title>
+<style>
+body {
+  font-family: Arial;
+  padding: 40px;
+  background: #f4f6f8;
+}
+
+.card {
+  background: #fff;
+  padding: 25px;
+  border-radius: 12px;
+  max-width: 400px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+
+select {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 15px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+.loading {
+  font-size: 13px;
+  color: #888;
+  margin-bottom: 10px;
+}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h3>📍 Pilih Wilayah</h3>
+
+  <div id="loading" class="loading"></div>
+
+  <select id="province">
+    <option value="">Pilih Provinsi</option>
+  </select>
+
+  <select id="regency" disabled>
+    <option value="">Pilih Kabupaten</option>
+  </select>
+
+  <select id="district" disabled>
+    <option value="">Pilih Kecamatan</option>
+  </select>
+
+  <select id="village" disabled>
+    <option value="">Pilih Desa</option>
+  </select>
+
+</div>
+
+<script>
+const API_BASE = "https://district.ciu.workers.dev";
+
+const province = document.getElementById("province");
+const regency = document.getElementById("regency");
+const district = document.getElementById("district");
+const village = document.getElementById("village");
+const loading = document.getElementById("loading");
+
+function setLoading(text) {
+  loading.textContent = text;
+}
+
+function populate(select, data, placeholder) {
+  select.innerHTML = `<option value="">${placeholder}</option>`;
+  data.forEach(item => {
+    const opt = document.createElement("option");
+    opt.value = item.id;
+    opt.textContent = item.name;
+    select.appendChild(opt);
+  });
+}
+
+function resetSelect(select, placeholder, disabled = true) {
+  select.innerHTML = `<option value="">${placeholder}</option>`;
+  select.disabled = disabled;
+}
+
+async function fetchAPI(endpoint) {
+  try {
+    setLoading("Loading...");
+    const res = await fetch(API_BASE + endpoint);
+    const data = await res.json();
+    setLoading("");
+    return data;
+  } catch (err) {
+    setLoading("Gagal load data ❌");
+    console.error(err);
+  }
+}
+
+// Load Provinces
+async function init() {
+  const data = await fetchAPI("/api/provinces");
+  populate(province, data, "Pilih Provinsi");
+}
+
+province.addEventListener("change", async function() {
+  if (!this.value) {
+    resetSelect(regency, "Pilih Kabupaten");
+    resetSelect(district, "Pilih Kecamatan");
+    resetSelect(village, "Pilih Desa");
+    return;
+  }
+
+  const data = await fetchAPI(`/api/regencies?province_id=${this.value}`);
+  populate(regency, data, "Pilih Kabupaten");
+  regency.disabled = false;
+
+  resetSelect(district, "Pilih Kecamatan");
+  resetSelect(village, "Pilih Desa");
+});
+
+regency.addEventListener("change", async function() {
+  if (!this.value) {
+    resetSelect(district, "Pilih Kecamatan");
+    resetSelect(village, "Pilih Desa");
+    return;
+  }
+
+  const data = await fetchAPI(`/api/districts?regency_id=${this.value}`);
+  populate(district, data, "Pilih Kecamatan");
+  district.disabled = false;
+
+  resetSelect(village, "Pilih Desa");
+});
+
+district.addEventListener("change", async function() {
+  if (!this.value) {
+    resetSelect(village, "Pilih Desa");
+    return;
+  }
+
+  const data = await fetchAPI(`/api/villages?district_id=${this.value}`);
+  populate(village, data, "Pilih Desa");
+  village.disabled = false;
+});
+
+init();
+</script>
+
+</body>
+</html>
