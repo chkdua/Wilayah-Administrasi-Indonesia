@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Wilayah Indonesia</title>
+</head>
+<body>
+
+<h3>Pilih Wilayah</h3>
+
+<select id="province">
+  <option value="">Pilih Provinsi</option>
+</select>
+
+<select id="regency" disabled>
+  <option value="">Pilih Kabupaten</option>
+</select>
+
+<select id="district" disabled>
+  <option value="">Pilih Kecamatan</option>
+</select>
+
+<select id="village" disabled>
+  <option value="">Pilih Desa</option>
+</select>
+
+<script>
+const base = "https://raw.githubusercontent.com/chkdua/Wilayah-Administrasi-Indonesia/master/csv/";
+
+let provinces = [];
+let regencies = [];
+let districts = [];
+let villages = [];
+
+// Parse CSV ; separator
+function clean(value) {
+  return value.replace(/^"|"$/g, "").trim();
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split("\n");
+  const headers = lines[0].split(";").map(h => clean(h));
+
+  return lines.slice(1).map(line => {
+    const values = line.split(";");
+    let obj = {};
+    headers.forEach((h, i) => {
+      obj[h] = clean(values[i] || "");
+    });
+    return obj;
+  });
+}
+
+
+// Load all CSV
+async function loadData() {
+  const p = await fetch(base + "provinces.csv").then(r => r.text());
+  const r = await fetch(base + "regencies.csv").then(r => r.text());
+  const d = await fetch(base + "districts.csv").then(r => r.text());
+  const v = await fetch(base + "villages.csv").then(r => r.text());
+
+  provinces = parseCSV(p);
+  regencies = parseCSV(r);
+  districts = parseCSV(d);
+  villages = parseCSV(v);
+
+  populateProvinces();
+}
+
+function populateProvinces() {
+  const select = document.getElementById("province");
+  provinces.forEach(p => {
+    select.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+  });
+}
+
+document.getElementById("province").addEventListener("change", function() {
+  const provinceId = this.value;
+  const select = document.getElementById("regency");
+  select.innerHTML = `<option value="">Pilih Kabupaten</option>`;
+  document.getElementById("district").innerHTML = `<option value="">Pilih Kecamatan</option>`;
+  document.getElementById("village").innerHTML = `<option value="">Pilih Desa</option>`;
+  select.disabled = !provinceId;
+
+  const filtered = regencies.filter(r => r.province_id === provinceId);
+  filtered.forEach(r => {
+    select.innerHTML += `<option value="${r.id}">${r.name}</option>`;
+  });
+});
+
+document.getElementById("regency").addEventListener("change", function() {
+  const regencyId = this.value;
+  const select = document.getElementById("district");
+  select.innerHTML = `<option value="">Pilih Kecamatan</option>`;
+  document.getElementById("village").innerHTML = `<option value="">Pilih Desa</option>`;
+  select.disabled = !regencyId;
+
+  const filtered = districts.filter(d => d.regency_id === regencyId);
+  filtered.forEach(d => {
+    select.innerHTML += `<option value="${d.id}">${d.name}</option>`;
+  });
+});
+
+document.getElementById("district").addEventListener("change", function() {
+  const districtId = this.value;
+  const select = document.getElementById("village");
+  select.innerHTML = `<option value="">Pilih Desa</option>`;
+  select.disabled = !districtId;
+
+  const filtered = villages.filter(v => v.district_id === districtId);
+  filtered.forEach(v => {
+    select.innerHTML += `<option value="${v.id}">${v.name}</option>`;
+  });
+});
+
+loadData();
+</script>
+</body>
+</html>
